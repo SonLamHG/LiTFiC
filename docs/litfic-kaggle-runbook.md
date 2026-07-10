@@ -15,6 +15,44 @@ Full reproduction stays on rented A100/H100.
 
 ---
 
+## Sizing the subset — bound by compute, not disk
+
+Derived from the real figure **262 GB features / 1467 h** of BOBSL video:
+
+| Unit | Feature | Pseudo-label | Total |
+|---|---|---|---|
+| per minute | ~3.0 MB | ~0.3 MB | **~3.3 MB** |
+| per hour | ~180 MB | ~18 MB | **~200 MB** |
+| **per episode** (~45 min avg, ~490 sentences) | ~135 MB | ~14 MB | **~150 MB** |
+
+Smallest granularity is **one whole episode** (never isolated sentences — the
+previous-sentence context and per-episode DDP sharding need intact episodes).
+
+**Disk is not the binding constraint.** `/kaggle/working` is 20 GB and attached
+`/kaggle/input` datasets can be far larger — you could fit ~130 episodes. The real
+limit is **GPU time**: Kaggle gives ~12 h/session, ~30 h/week on 2×T4, and Llama-3.2-3B
+with long prompts is slow (train ~1–3 sentences/s; eval, which generates ~50 tokens
+auto-regressively, is much slower). So size the subset to what a session can actually
+process, not to fill the disk.
+
+**Recommended (to understand the flow):**
+
+| Purpose | Episodes | ~Sentences | LMDB size |
+|---|---|---|---|
+| **TRAIN** (see the loop run) | 3 | ~1,500 | **~450 MB** |
+| **EVAL** (see the eval flow + outputs) | 1 | ~490 | **~150 MB** |
+| Both (3 train + 1 separate eval) | 4 | ~2,000 | **~600 MB** |
+
+Plus shared metadata kept whole (subtitles, vocab, synonyms, info, BLIP captions):
+~0.5–1.5 GB (optionally trim subtitles/captions to the chosen episodes → <100 MB).
+**Total Kaggle upload ≈ 1–2 GB** — hundreds of times below the 262 GB full set.
+
+Bigger subsets don't help understanding and only burn session quota; quality can't
+approach paper level regardless (that needs 689k pairs + H100-days → the cloud runbook).
+After running `subset_bobsl_lmdb.py`, `du -sh feats_lmdb/ pl_lmdb/` gives the exact size.
+
+---
+
 ## Stage 0 — One-time data prep (on a big-disk machine, NOT Kaggle)
 
 You have Google Drive 5 TB as the master store. Do the heavy step on a VM / machine
