@@ -42,7 +42,12 @@ def _episode_prefixes(episodes, kind):
 
 
 def copy_subset(src_path, dst_path, episodes, kind, map_size=None):
-    """Copy every key whose prefix (before b'/') is in the chosen episodes."""
+    """Copy the keys of the chosen episodes into a new small LMDB.
+
+    LMDB keys are stored in sorted (lexicographic) order and every key for an
+    episode shares the prefix ``<prefix>/``, so all of an episode's keys are
+    contiguous. We seek to each prefix with ``set_range`` and read only that
+    slice -- crucial for the full 262 GB source (no full scan)."""
     wanted = _episode_prefixes(episodes, kind)
     os.makedirs(dst_path, exist_ok=True)
     src = lmdb.open(src_path, readonly=True, lock=False, max_readers=512,
@@ -52,9 +57,13 @@ def copy_subset(src_path, dst_path, episodes, kind, map_size=None):
     n_copied = 0
     with src.begin() as rtxn, dst.begin(write=True) as wtxn:
         cur = rtxn.cursor()
-        for key, val in cur:
-            prefix = key.split(b"/", 1)[0]
-            if prefix in wanted:
+        for prefix in sorted(wanted):
+            seek = prefix + b"/"
+            if not cur.set_range(seek):
+                continue  # nothing at/after this prefix
+            for key, val in cur:
+                if not key.startswith(seek):
+                    break  # left this episode's contiguous block
                 wtxn.put(key, val)
                 n_copied += 1
     src.close(); dst.close()
