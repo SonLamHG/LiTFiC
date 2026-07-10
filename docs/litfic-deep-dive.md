@@ -196,3 +196,22 @@ How2Sign Ours(Vid): 11.8/44.1/31.1/93.3/26.1/1.39.
   `PROJECT_ROOT` env var; see `configs/paths/README.md` for the download map.
 - **Pretrained ckpt:** `bobsl_all.ckpt` (linked in README) lets you evaluate without
   training.
+
+---
+
+## 10. Part B — local smoke-test (verified)
+
+`scripts/smoke_test.py` exercises the real `VggSLTNet` (MMProjector + LanguageDecoder)
+with a tiny Llama-arch model (SmolLM-135M) instead of Llama-3-8B, on CPU. It bypasses
+the lightning/hydra/LMDB stack (stubs out `src.utils.__init__`) and feeds a synthetic
+batch shaped like `collate_fn_padd_t`, with the full Vid+PG+Prev+BG cue set.
+
+Confirmed on this machine (torch 2.11 CPU, transformers 5.5.4):
+- Prompt assembles and tokenizes; **loss is over 22 subtitle tokens only**, the rest
+  masked to `-100` — proving the label-masking design in §4.
+- **Trainable params = 0.74%** (1.0M) = MLP projector + LoRA adapters; backward flows.
+- `decoder.generate()` produces a sentence auto-regressively.
+
+Run: `PROJECT_ROOT=$(pwd) python scripts/smoke_test.py`
+(override the model with `SMOKE_LLM=...`). This is a **liveness proof of the pipeline,
+not paper numbers** — the projector/LoRA are untrained and the video tokens are random.
