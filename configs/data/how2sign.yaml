@@ -17,3 +17,8 @@ dataset_config:
   use_prev: False
   sub_aug_drop: True
   aug_drop_pct: 0.2
+  # CSUC Dataverse (DOI 10.34810/data693) fairseq manifest schema:
+  id_col: id
+  text_col: translation
+  npy_col: signs_file
+  tsv_name_tmpl: "cvpr23.fairseq.i3d.{setname}.how2sign.tab"

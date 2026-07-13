@@ -45,6 +45,7 @@ class How2SignSentences(Dataset):
         id_col: str = "id",
         text_col: str = "translation",
         npy_col: str = "npy_path",
+        tsv_name_tmpl: str = "how2sign_{setname}.tsv",
         **kwargs,
     ):
         self.setname = setname
@@ -55,9 +56,28 @@ class How2SignSentences(Dataset):
         self.aug_drop_pct = aug_drop_pct
         self.id_col, self.text_col, self.npy_col = id_col, text_col, npy_col
 
-        tsv_path = os.path.join(tsv_dir, f"how2sign_{setname}.tsv")
+        # Resolve .npy files by basename so absolute paths from the manifest
+        # (e.g. signs_file = /orig/machine/.../ID.npy) and arbitrary unzip
+        # subdir layouts both work.
+        self._npy_index = self._index_npy(feats_dir)
+
+        tsv_path = os.path.join(tsv_dir, tsv_name_tmpl.format(setname=setname))
         rows = self._read_tsv(tsv_path)
         self.items = self._build_index(rows)
+
+    @staticmethod
+    def _index_npy(feats_dir: str) -> dict:
+        index = {}
+        if feats_dir and os.path.isdir(feats_dir):
+            for root, _dirs, files in os.walk(feats_dir):
+                for fn in files:
+                    if fn.endswith(".npy"):
+                        index.setdefault(fn, os.path.join(root, fn))
+        return index
+
+    def _resolve_npy(self, npy_ref: str) -> str:
+        base = os.path.basename(npy_ref)
+        return self._npy_index.get(base, os.path.join(self.feats_dir, npy_ref))
 
     def _read_tsv(self, path: str) -> List[dict]:
         with open(path, newline="", encoding="utf-8") as f:
@@ -91,7 +111,7 @@ class How2SignSentences(Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         it = self.items[idx]
-        feats = np.load(os.path.join(self.feats_dir, it["npy"]))
+        feats = np.load(self._resolve_npy(it["npy"]))
         feats = torch.from_numpy(np.asarray(feats, dtype=np.float32))
         if feats.ndim == 1:
             feats = feats.unsqueeze(0)
