@@ -1,0 +1,19 @@
+_target_: src.data.slt_datamodule.SLTDataModule
+batch_size: 1
+num_workers: 2
+pin_memory: True
+collate_fn: src.data.components.how2sign.collate_fn_padd_h2s
+dataset: how2sign
+eval_data_size: -1
+train_data_fraction: 1.0
+ret_data_size: 100
+val_episode_ind_path: ${paths.val_episode_ind_path}
+test_episode_ind_path: ${paths.test_episode_ind_path}
+test_setname: test
+dataset_config:
+  tsv_dir: ${paths.h2s_tsv_dir}
+  feats_dir: ${paths.h2s_feats_dir}
+  feats_dim: 1024
+  use_prev: False
+  sub_aug_drop: True
+  aug_drop_pct: 0.2

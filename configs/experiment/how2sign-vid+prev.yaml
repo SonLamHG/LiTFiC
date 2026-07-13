@@ -1,0 +1,45 @@
+# @package _global_
+
+# to execute this experiment run:
+# python src/train.py experiment=how2sign-vid+prev
+
+defaults:
+  - override /data: how2sign
+  - override /model: vgg_slt
+  - override /paths: how2sign
+  - override /callbacks: default
+  - override /trainer: gpu
+
+tags: ["how2sign", "vid+prev"]
+
+seed: 12345
+
+trainer:
+  min_epochs: 10
+  max_epochs: 10
+  precision: 16-mixed
+  devices: [0]
+  accumulate_grad_batches: 16
+  gradient_clip_val: 1.0
+
+data:
+  batch_size: 1
+  dataset_config:
+    use_prev: True
+
+model:
+  net:
+    mm_projector_config:
+      mm_hidden_size: 1024
+      hidden_size: 2048
+      projector_type: mlp2x_gelu
+    llm_config:
+      decoder_config:
+        attn_implementation: sdpa
+      use_pl_w_feats: False
+      use_rec_prev: True
+      use_gt_prev: False
+      mix_in_prev_prob: 1.0
+      use_bg_words: False
+      bg_desc: False
+      use_spottings: False

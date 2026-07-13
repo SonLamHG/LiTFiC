@@ -1,0 +1,7 @@
+defaults:
+  - default
+
+# Override LLM + How2Sign data roots (point these at the Kaggle mount).
+llm_root: Qwen/Qwen2.5-3B
+h2s_tsv_dir: /kaggle/input/how2sign-i3d/tsv
+h2s_feats_dir: /kaggle/input/how2sign-i3d/feats
