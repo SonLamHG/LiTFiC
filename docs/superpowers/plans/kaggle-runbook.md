@@ -21,11 +21,10 @@ the configs.
 
 ### Cell 2 — Install deps (no flash-attn)
 ```python
-!pip install -q "lightning==2.3.0" torchmetrics "hydra-core==1.3.2" \
-  "hydra-colorlog==1.2.0" omegaconf rich rootutils einops lmdb \
-  "transformers==4.45.2" "peft==0.12.0" sentencepiece \
-  "lightning-utilities==0.11.2" nltk pycocoevalcap lightning-bolts
-print("deps installed")
+# single line — multi-line `\` continuation breaks inside a Kaggle `!` cell
+!pip install -q lightning==2.3.0 torchmetrics hydra-core==1.3.2 hydra-colorlog==1.2.0 omegaconf rich rootutils einops lmdb transformers==4.45.2 peft==0.12.0 sentencepiece lightning-utilities==0.11.2 nltk pycocoevalcap lightning-bolts
+import lightning, hydra, transformers, peft, lightning_bolts  # verify they really installed
+print("deps OK", lightning.__version__, transformers.__version__)
 ```
 
 ### Cell 3 — Env + episode-index files (whole-set iteration)
@@ -85,15 +84,13 @@ print("prev examples:", b["rec_prev"])  # non-first sentences should carry a pri
 
 ### Cell 7 — M1 sanity (no OOM, finite loss)
 ```python
-!python src/train.py experiment=how2sign-vid {OVR} \
-  trainer.max_epochs=1 +trainer.limit_train_batches=20 +trainer.limit_val_batches=5 logger=csv
+!python src/train.py experiment=how2sign-vid {OVR} trainer.max_epochs=1 +trainer.limit_train_batches=20 +trainer.limit_val_batches=5 logger=csv
 ```
 > OOM? add `model.net.mm_projector_config.projector_type=conv_K5_P2_KP2_L2` to the command.
 
 ### Cell 8 — M1 train (Vid-only, 3 epochs, checkpoints)
 ```python
-!python src/train.py experiment=how2sign-vid {OVR} \
-  trainer.max_epochs=3 callbacks.model_checkpoint.every_n_train_steps=500 logger=csv
+!python src/train.py experiment=how2sign-vid {OVR} trainer.max_epochs=3 callbacks.model_checkpoint.every_n_train_steps=500 logger=csv
 ```
 
 ### Cell 9 — M1 eval on a test subset
@@ -106,8 +103,7 @@ print("using", CKPT)
 
 ### Cell 10 — M2 train (Vid+Prev, 3 epochs)
 ```python
-!python src/train.py experiment=how2sign-vid+prev {OVR} \
-  trainer.max_epochs=3 callbacks.model_checkpoint.every_n_train_steps=500 logger=csv
+!python src/train.py experiment=how2sign-vid+prev {OVR} trainer.max_epochs=3 callbacks.model_checkpoint.every_n_train_steps=500 logger=csv
 ```
 
 ### Cell 11 — M2 eval + ablation
