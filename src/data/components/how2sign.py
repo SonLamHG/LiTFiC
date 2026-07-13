@@ -111,3 +111,41 @@ class How2SignSentences(Dataset):
             "video_name": it["video_name"],
             "id": it["id"],
         }
+
+
+def _pad_features(tensor_list: List[torch.Tensor]):
+    """Right-pad a list of [T_i, C] feature tensors to [B, T_max, C] and build
+    the matching [B, T_max] attention mask. Local, self-contained helper so the
+    How2Sign path does not import BOBSL's sentence/lmdb modules."""
+    max_len = max(t.size(0) for t in tensor_list)
+    padded, masks = [], []
+    for t in tensor_list:
+        pad_len = max_len - t.size(0)
+        padded.append(torch.nn.functional.pad(t, (0, 0, 0, pad_len), "constant", 0))
+        masks.append(torch.cat([torch.ones(t.size(0)), torch.zeros(pad_len)]))
+    return torch.stack(padded), torch.stack(masks)
+
+
+def collate_fn_padd_h2s(batch: List[dict]) -> dict:
+    """Collate How2Sign items into the batch dict expected by VggSLTNet.forward.
+    Adds a ``rec_prev`` key (list of ``[prev]`` / ``[]`` per item) so the GT
+    previous sentence reaches LanguageDecoder._process_predict at inference."""
+    features = [item["features"] for item in batch]
+    padded_features, attn_masks = _pad_features(features)
+    prevs = [item["previous_context"] for item in batch]
+    rec_prev = [[p] if p else [] for p in prevs]
+    return {
+        "features": padded_features,
+        "attn_masks": attn_masks,
+        "subtitles": [item["subtitle"] for item in batch],
+        "questions": [item["question"] for item in batch],
+        "previous_contexts": prevs,
+        "pls": [item["pls"] for item in batch],
+        "bg_description": [item["bg_description"] for item in batch],
+        "spottings": [item["spottings"] for item in batch],
+        "rec_prev": rec_prev,
+        "start": [item["sub_start"] for item in batch],
+        "end": [item["sub_end"] for item in batch],
+        "video_names": [item["video_name"] for item in batch],
+        "ids": [item["id"] for item in batch],
+    }

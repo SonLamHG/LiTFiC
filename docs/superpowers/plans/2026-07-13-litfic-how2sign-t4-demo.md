@@ -243,7 +243,11 @@ git commit -m "feat(data): add How2SignSentences dataset (npy+tsv, GT prev)"
 - Test: `tests/data/test_how2sign_collate.py`
 
 **Interfaces:**
-- Consumes: `src.data.components.sentence.pad_tensors_and_create_attention_masks`, `How2SignSentences.__getitem__` dict.
+- Consumes: `How2SignSentences.__getitem__` dict. (Execution deviation: uses a
+  **local** `_pad_features` helper defined in `how2sign.py` instead of importing
+  `pad_tensors_and_create_attention_masks` from `sentence.py` — that import
+  transitively pulls `lmdb_loader` → `torchvision.io.write_video`, which is
+  broken in the local env and irrelevant to the demo path.)
 - Produces: `collate_fn_padd_h2s(batch: list[dict]) -> dict` with keys `features:Tensor[B,Tmax,1024], attn_masks:Tensor[B,Tmax], subtitles:list[str], questions:list[str], previous_contexts:list[str], pls:list[None], bg_description:list[None], spottings:list[list], rec_prev:list[list[str]], video_names:list[str], ids:list[str], start:list, end:list`.
 - Note: `rec_prev[i]` is `[prev]` when prev is non-empty else `[]` — the format `LanguageDecoder._process_predict` expects (it does `". ".join(r)`).
 
