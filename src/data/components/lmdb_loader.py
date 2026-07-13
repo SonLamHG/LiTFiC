@@ -1,6 +1,7 @@
 """
 Generic dataset that loads data from LMDB database.
 """
+import os
 import lmdb
 import torch
 import warnings
@@ -9,6 +10,12 @@ from pathlib import Path
 from einops import rearrange
 from typing import List, Optional, Union
 from torchvision.io import decode_image, write_video
+
+# Reuse one read-only Environment per path. The datamodule builds train/val/test
+# datasets in the same process, each opening the same LMDB; newer py-lmdb forbids
+# opening one environment twice per process ("already open in this process").
+# Sharing a read-only env across loaders is safe and side-steps that guard.
+_ENV_CACHE = {}
 
 class LMDBLoader(object):
     """
@@ -57,8 +64,13 @@ class LMDBLoader(object):
             self.lmdb_stride = lmdb_stride
 
     def _init_lmdb(self) -> lmdb.Environment:
-        """Initialise LMDB database."""
-        return lmdb.open(self.lmdb_path, readonly=True, lock=False, max_readers=10000)
+        """Initialise (or reuse) the LMDB database for this path."""
+        key = os.path.abspath(self.lmdb_path)
+        env = _ENV_CACHE.get(key)
+        if env is None:
+            env = lmdb.open(self.lmdb_path, readonly=True, lock=False, max_readers=10000)
+            _ENV_CACHE[key] = env
+        return env
 
     @staticmethod
     def _get_feat_key(episode_name: str, frame_index: int, suffix: str = ".np") -> bytes:
