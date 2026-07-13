@@ -5,7 +5,7 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric
 
 from src.models.components.loss_modules.ce_loss import CELoss
-from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
+from src.models.components.lr_scheduler import LinearWarmupCosineAnnealingLR
 
 from pycocoevalcap.bleu.bleu import Bleu
 from pycocoevalcap.rouge.rouge import Rouge

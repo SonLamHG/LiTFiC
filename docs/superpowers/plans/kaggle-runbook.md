@@ -22,10 +22,11 @@ the configs.
 ### Cell 2 — Install deps (no flash-attn)
 ```python
 # single line — multi-line `\` continuation breaks inside a Kaggle `!` cell
-!pip install -q lightning==2.3.0 torchmetrics hydra-core==1.3.2 hydra-colorlog==1.2.0 omegaconf rich rootutils einops lmdb transformers==4.45.2 peft==0.12.0 sentencepiece lightning-utilities==0.11.2 nltk pycocoevalcap lightning-bolts
-import lightning, hydra, transformers, peft, lightning_bolts  # verify they really installed
+!pip install -q lightning==2.3.0 torchmetrics hydra-core==1.3.2 hydra-colorlog==1.2.0 omegaconf rich rootutils einops lmdb transformers==4.45.2 peft==0.12.0 sentencepiece lightning-utilities==0.11.2 nltk pycocoevalcap
+import lightning, hydra, transformers, peft  # verify they really installed
 print("deps OK", lightning.__version__, transformers.__version__)
 ```
+(The LR scheduler is now vendored in-repo, so `lightning-bolts`/`pl_bolts` is no longer needed.)
 
 ### Cell 3 — Env + episode-index files (whole-set iteration)
 ```python
@@ -121,8 +122,7 @@ subset → that ablation is the demo's point.
 
 ## Notes / gotchas
 - Kaggle session ≤ 12 h, 30 h/week → keep `max_epochs` small (3–5); checkpoints let you resume.
-- If a run dies importing `pl_bolts`: edit `configs/model/vgg_slt.yaml` `scheduler:` to a
-  stock `torch.optim.lr_scheduler.CosineAnnealingLR` and rerun.
+- The LR scheduler is vendored (`src/models/components/lr_scheduler.py`) — no pl_bolts dep.
 - If metrics error on Java: `!apt-get -y install default-jre`.
 - Qwen2.5-3B downloads from HuggingFace on first run (needs Internet On); no token required.
 - Column mapping (`signs_file`/`translation`) + `.tab` filename are already wired in

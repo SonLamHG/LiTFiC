@@ -7,7 +7,7 @@ optimizer:
   weight_decay: 0.
 
 scheduler:
-  _target_: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
+  _target_: src.models.components.lr_scheduler.LinearWarmupCosineAnnealingLR
   _partial_: true
   warmup_epochs: 5
   max_epochs: ${trainer.max_epochs}
