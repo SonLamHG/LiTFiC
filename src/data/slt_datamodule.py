@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional, Callable
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, Subset
-from ..data.components.sentence import Sentences
 
 import torch
 import json
@@ -58,13 +57,16 @@ class SLTDataModule(LightningDataModule):
             
             ########### extra training data ############
 
-            self.data_train = Sentences(**self.hparams.dataset_config, setname="train")
             if self.dataset == "how2sign":
-                self.data_val = Sentences(**self.hparams.dataset_config, setname="test")
+                from src.data.components.how2sign import How2SignSentences
+                self.data_train = How2SignSentences(**self.hparams.dataset_config, setname="train")
+                self.data_val = How2SignSentences(**self.hparams.dataset_config, setname="test")
+                self.data_test = How2SignSentences(**self.hparams.dataset_config, setname=self.test_setname)
             else:
+                from src.data.components.sentence import Sentences
+                self.data_train = Sentences(**self.hparams.dataset_config, setname="train")
                 self.data_val = Sentences(**self.hparams.dataset_config, setname="val")
-
-            self.data_test = Sentences(**self.hparams.dataset_config, setname=self.test_setname)
+                self.data_test = Sentences(**self.hparams.dataset_config, setname=self.test_setname)
             # if self.hparams.extra_dataset_config is not None:
             #     extra_data_train = Sentences(**self.hparams.extra_dataset_config, setname="train")
             #     self.data_train = torch.utils.data.ConcatDataset([self.data_train, extra_data_train])
