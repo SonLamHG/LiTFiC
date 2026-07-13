@@ -45,14 +45,13 @@ avoids the 20 GB /kaggle/working cap; re-download each new session).
 import os
 os.makedirs("/kaggle/working/LiTFiC/data/tsv", exist_ok=True)
 os.makedirs("/kaggle/temp/feats", exist_ok=True)
-B = "https://dataverse.csuc.cat/api/access/datafile"
-# manifests (.tab)
-!wget -q "$B/51923" -O /kaggle/working/LiTFiC/data/tsv/cvpr23.fairseq.i3d.train.how2sign.tab
-!wget -q "$B/53222" -O /kaggle/working/LiTFiC/data/tsv/cvpr23.fairseq.i3d.test.how2sign.tab
-# feature .npy zips
-!wget -q "$B/51543" -O /kaggle/temp/train.zip && unzip -q -o /kaggle/temp/train.zip -d /kaggle/temp/feats/ && rm /kaggle/temp/train.zip
-!wget -q "$B/51538" -O /kaggle/temp/test.zip  && unzip -q -o /kaggle/temp/test.zip  -d /kaggle/temp/feats/ && rm /kaggle/temp/test.zip
-!echo "n_npy=$(find /kaggle/temp/feats -name '*.npy' | wc -l)"
+# Full URLs (a shell $VAR does NOT expand inside a Kaggle ! cell -> empty download)
+!wget -O /kaggle/working/LiTFiC/data/tsv/cvpr23.fairseq.i3d.train.how2sign.tab https://dataverse.csuc.cat/api/access/datafile/51923
+!wget -O /kaggle/working/LiTFiC/data/tsv/cvpr23.fairseq.i3d.test.how2sign.tab https://dataverse.csuc.cat/api/access/datafile/53222
+!wget -q -O /kaggle/temp/train.zip https://dataverse.csuc.cat/api/access/datafile/51543 && unzip -q -o /kaggle/temp/train.zip -d /kaggle/temp/feats/ && rm /kaggle/temp/train.zip
+!wget -q -O /kaggle/temp/test.zip https://dataverse.csuc.cat/api/access/datafile/51538 && unzip -q -o /kaggle/temp/test.zip -d /kaggle/temp/feats/ && rm /kaggle/temp/test.zip
+!ls -la /kaggle/working/LiTFiC/data/tsv/
+!echo "npy count:"; find /kaggle/temp/feats -name '*.npy' | wc -l
 ```
 > Tight on disk? Skip `train.zip`; download `val.zip` (ID 51922, 435 MB) instead and
 > also grab the val manifest (ID 51537) as the train set for a smaller smoke test.
@@ -61,16 +60,18 @@ B = "https://dataverse.csuc.cat/api/access/datafile"
 ```python
 import csv, glob, os, numpy as np
 tab = "/kaggle/working/LiTFiC/data/tsv/cvpr23.fairseq.i3d.train.how2sign.tab"
-r = csv.DictReader(open(tab, newline="", encoding="utf-8"), delimiter="\t")
-print("COLUMNS:", r.fieldnames)
-row = next(r); print("id=", row.get("id"), "| translation=", row.get("translation"))
-print("signs_file=", row.get("signs_file"), "| offset/len=", row.get("signs_offset"), row.get("signs_length"))
+print("tab size:", os.path.getsize(tab), "bytes")   # 0 bytes => download failed
+with open(tab, newline="", encoding="utf-8") as f:
+    r = csv.DictReader(f, delimiter="\t")
+    print("COLUMNS:", r.fieldnames)
+    row = next(r)
+print("id=", row["id"], "| translation=", row["translation"])
+print("offset/length=", row["signs_offset"], row["signs_length"])
 npy = glob.glob("/kaggle/temp/feats/**/*.npy", recursive=True)[0]
 print("NPY", os.path.basename(npy), np.load(npy).shape)
 ```
-**Check:** feature dim should be **1024**, and each sentence should be its **own .npy**.
-If the shape/dim differs or `signs_offset/length` look meaningful (features per video),
-stop and report — the loader may need offset slicing.
+**Check:** feature dim (last number) should be **1024**; the npy row count should be
+**≥ `signs_length`** (the loader slices `[offset : offset+length]`, already wired).
 
 ### Cell 6 — (optional) confirm the prev cue reaches a batch (CPU, no LLM)
 ```python

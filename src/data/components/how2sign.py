@@ -45,6 +45,9 @@ class How2SignSentences(Dataset):
         id_col: str = "id",
         text_col: str = "translation",
         npy_col: str = "npy_path",
+        offset_col: str = "signs_offset",
+        length_col: str = "signs_length",
+        apply_offset: bool = True,
         tsv_name_tmpl: str = "how2sign_{setname}.tsv",
         **kwargs,
     ):
@@ -55,6 +58,8 @@ class How2SignSentences(Dataset):
         self.sub_aug_drop = sub_aug_drop
         self.aug_drop_pct = aug_drop_pct
         self.id_col, self.text_col, self.npy_col = id_col, text_col, npy_col
+        self.offset_col, self.length_col = offset_col, length_col
+        self.apply_offset = apply_offset
 
         # Resolve .npy files by basename so absolute paths from the manifest
         # (e.g. signs_file = /orig/machine/.../ID.npy) and arbitrary unzip
@@ -100,11 +105,20 @@ class How2SignSentences(Dataset):
                         "video_name": vid,
                         "text": r[self.text_col],
                         "npy": r[self.npy_col],
+                        "offset": self._to_int(r.get(self.offset_col)),
+                        "length": self._to_int(r.get(self.length_col)),
                         "prev": prev_text if self.use_prev else "",
                     }
                 )
                 prev_text = r[self.text_col]
         return items
+
+    @staticmethod
+    def _to_int(val):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return None
 
     def __len__(self) -> int:
         return len(self.items)
@@ -115,6 +129,12 @@ class How2SignSentences(Dataset):
         feats = torch.from_numpy(np.asarray(feats, dtype=np.float32))
         if feats.ndim == 1:
             feats = feats.unsqueeze(0)
+        # Slice the sentence window [offset : offset+length] as the source
+        # fairseq manifest specifies, when the stored .npy is longer.
+        if self.apply_offset and it["offset"] is not None and it["length"] is not None:
+            off, ln = it["offset"], it["length"]
+            if 0 <= off < feats.shape[0] and ln > 0 and off + ln <= feats.shape[0]:
+                feats = feats[off:off + ln]
         subtitle = cleanup_sub(it["text"])
         if self.sub_aug_drop and self.setname == "train" and random.random() < 0.5:
             subtitle = remove_words(subtitle, max_p=self.aug_drop_pct)
