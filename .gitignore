@@ -160,3 +160,5 @@ slurm_logs/
 /bobsl/
 *.zip
 *profanity.py
+# generated synthetic tiny dataset
+tiny_bobsl/

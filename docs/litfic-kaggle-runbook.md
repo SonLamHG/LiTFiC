@@ -15,6 +15,27 @@ Full reproduction stays on rented A100/H100.
 
 ---
 
+## Option Z — Tiny synthetic data (no download, no license)
+
+If you just want to see the flow **right now** without the 262 GB / BBC license, generate
+a synthetic dataset in the exact BOBSL formats and run the real pipeline on it:
+
+```bash
+python scripts/make_tiny_bobsl.py --out-dir ./tiny_bobsl   # builds LMDBs + metadata + paths_tiny.yaml
+cp tiny_bobsl/paths_tiny.yaml configs/paths/tiny.yaml       # edit llm_root inside first
+python src/train.py experiment=vid+pg+prev+bg paths=tiny \
+  trainer=gpu trainer.devices=[0] trainer.precision=16-mixed trainer.max_epochs=2 \
+  data.batch_size=1 model.net.mm_projector_config.hidden_size=3072 \
+  model.net.llm_config.decoder_config.attn_implementation=eager
+```
+Verified locally: the real `Sentences` datamodule reads the synthetic feature/PL LMDBs
+(→ `(T,768)` features, synonym-grouped pseudo-glosses) and `collate_fn_padd_t` batches
+them; combined with the Part B model smoke-test this exercises the whole pipeline.
+**Translations are meaningless** (random features) — this is a flow check only. Use the
+real BOBSL subset below when you want meaningful outputs.
+
+---
+
 ## Sizing the subset — bound by compute, not disk
 
 Derived from the real figure **262 GB features / 1467 h** of BOBSL video:
