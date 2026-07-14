@@ -14,6 +14,8 @@ dataset_config:
   tsv_dir: ${paths.h2s_tsv_dir}
   feats_dir: ${paths.h2s_feats_dir}
   feats_dim: 1024
+  # pre-extracted I3D features are loaded from disk (referenced by model.net.load_features)
+  load_features: True
   use_prev: False
   sub_aug_drop: True
   aug_drop_pct: 0.2
