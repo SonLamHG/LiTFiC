@@ -20,6 +20,10 @@ INITIAL_PROMPT = (
     "signing sequence and translate it into English."
 )
 
+# Minimum temporal length so a conv mapping network's pooling never yields a
+# size-0 output on ultra-short clips (conv_K5_P2_KP2_L2 needs >=4 frames).
+MIN_VIDEO_FRAMES = 8
+
 _ID_RE = re.compile(r"^(?P<vid>.+?)_(?P<idx>\d+)(?:[-_].*)?$")
 
 
@@ -135,6 +139,12 @@ class How2SignSentences(Dataset):
             off, ln = it["offset"], it["length"]
             if 0 <= off < feats.shape[0] and ln > 0 and off + ln <= feats.shape[0]:
                 feats = feats[off:off + ln]
+        # Guarantee a minimum frame count: a conv mapping network (e.g.
+        # conv_K5_P2_KP2_L2) pools the temporal axis and produces a size-0
+        # output for ultra-short clips. Right-pad by repeating the last frame.
+        if 0 < feats.shape[0] < MIN_VIDEO_FRAMES:
+            pad = MIN_VIDEO_FRAMES - feats.shape[0]
+            feats = torch.cat([feats, feats[-1:].expand(pad, feats.shape[1])], dim=0)
         subtitle = cleanup_sub(it["text"])
         if self.sub_aug_drop and self.setname == "train" and random.random() < 0.5:
             subtitle = remove_words(subtitle, max_p=self.aug_drop_pct)
