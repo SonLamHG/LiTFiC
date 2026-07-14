@@ -22,3 +22,6 @@ dataset_config:
   text_col: translation
   npy_col: signs_file
   tsv_name_tmpl: "cvpr23.fairseq.i3d.{setname}.how2sign.tab"
+  # .npy files are per-sentence (~signs_length rows); signs_offset is a
+  # video-relative frame index (metadata), NOT an index into the file.
+  apply_offset: False
