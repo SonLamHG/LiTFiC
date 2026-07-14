@@ -310,6 +310,12 @@ class SLTLitModule(LightningModule):
         Returns:
             torch.Tensor: A concatenated tensor containing all tensors from all processes.
         """
+        # Single-process (no DDP): nothing to gather. Lightning's all_gather returns
+        # the tensor unchanged (no world dim), so the squeeze/gather logic below would
+        # raise. Short-circuit to keep single-GPU (e.g. Kaggle T4) runs working.
+        if getattr(self.trainer, "world_size", 1) == 1:
+            return tensor
+
         # Step 1: Gather the size of the tensor along the specified dimension from all processes
         tensor_size = torch.tensor([tensor.size(dim)], device=tensor.device)
         gathered_sizes = self.all_gather(tensor_size)  # Shape: [world_size, 1]
