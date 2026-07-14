@@ -1,5 +1,31 @@
 # Kaggle Runbook — LiTFiC How2Sign Vid+Prev demo (single T4)
 
+> **STATUS (2026-07-14): demo GREEN, driven headlessly via the Kaggle API.**
+> Kernels `snlmhong/litfic-h2s-m1` (Vid-only smoke, exit=0) and
+> `snlmhong/litfic-h2s-demo` (Vid vs Vid+Prev ablation) both run to completion on
+> a single Tesla T4. Key requirements discovered: pin `machine_shape:NvidiaTeslaT4`
+> (Kaggle default P100/sm_60 is unsupported by torch 2.10), mount Qwen2.5-3B
+> (`qwen-lm/qwen2.5/transformers/3b/1`) + BLEURT-20 (`lizhong95/bleurt-20`) and set
+> `HF_HUB_OFFLINE=1`, use the **conv** mapping network
+> `conv_K5_P2_KP2_L2` with `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
+> (mlp2x_gelu OOMs on long clips), and `default-jre` + nltk `averaged_perceptron_tagger_eng`.
+>
+> **Light ablation (1 epoch, val split≈1700 as train, eval on test, 1×T4, ~21 min):**
+>
+> | metric | M1 Vid | M2 Vid+Prev |
+> |---|---|---|
+> | val loss | 3.67 | **3.19** |
+> | BLEU-4 | ~0 | ~0 |
+> | ROUGE-L | 0.076 | 0.051 |
+> | BLEURT | 0.241 | 0.236 |
+>
+> Takeaway: the previous-sentence cue measurably **lowers LM loss** (mechanism works),
+> but at 1-epoch/1700-sentence scale BLEU-4≈0 for both — surface metrics are at the
+> noise floor, so a translation-quality gain from Prev needs fuller training
+> (more epochs / the full 31k `train.zip`). The cells below are the original
+> interactive recipe; the automated kernels live in the session scratchpad.
+
+
 Paste these cells **in order** into a fresh Kaggle notebook and run top-to-bottom.
 Branch `how2sign-t4-demo` on `github.com/sonlamhg/LiTFiC`. Data: CSUC Dataverse
 DOI `10.34810/data693`. LLM: Qwen2.5-3B. T4 patches (fp16 + sdpa) are baked into
