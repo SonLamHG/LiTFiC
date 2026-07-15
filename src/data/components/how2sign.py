@@ -89,8 +89,11 @@ class How2SignSentences(Dataset):
         return self._npy_index.get(base, os.path.join(self.feats_dir, npy_ref))
 
     def _read_tsv(self, path: str) -> List[dict]:
+        # fairseq manifests are plain TSV with no quoting; a translation containing
+        # a bare double-quote would otherwise make csv merge rows into one oversized
+        # field (raising "field larger than field limit"). QUOTE_NONE reads literally.
         with open(path, newline="", encoding="utf-8") as f:
-            return list(csv.DictReader(f, delimiter="\t"))
+            return list(csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE))
 
     def _build_index(self, rows: List[dict]) -> List[dict]:
         # group by video, sort by sentence index, attach previous translation.
