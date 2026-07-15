@@ -93,9 +93,17 @@ class How2SignSentences(Dataset):
             return list(csv.DictReader(f, delimiter="\t"))
 
     def _build_index(self, rows: List[dict]) -> List[dict]:
-        # group by video, sort by sentence index, attach previous translation
+        # group by video, sort by sentence index, attach previous translation.
+        # When a feature index is available, drop rows whose .npy is missing so a
+        # partially-covered feature source (e.g. a third-party mirror) still runs
+        # on the intersection instead of crashing in np.load.
         by_video = defaultdict(list)
+        have_index = bool(self._npy_index)
+        self.n_dropped_missing_npy = 0
         for r in rows:
+            if have_index and os.path.basename(r[self.npy_col]) not in self._npy_index:
+                self.n_dropped_missing_npy += 1
+                continue
             vid, idx = parse_clip_id(r[self.id_col])
             by_video[vid].append((idx, r))
         items = []
